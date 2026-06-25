@@ -10,6 +10,14 @@
         return;
     }
 
+    // Capture the worker URL immediately on load while document.currentScript points to this script
+    let initialWorkerUrl = '';
+    if (document.currentScript && document.currentScript.src) {
+        try {
+            initialWorkerUrl = new URL(document.currentScript.src).origin;
+        } catch (e) {}
+    }
+
     const SESSION_COOKIE_NAME = '_nccs_session';
     const SESSION_EXPIRY_MS = 30 * 60 * 1000; // 30 minutes
     const DEFAULT_TIMEOUT_MS = 1000; // 1 second timeout for blocking sync
@@ -77,6 +85,10 @@
             // Apply default options
             options.timeout = options.timeout || DEFAULT_TIMEOUT_MS;
             options.domain = options.domain || getRootDomain(window.location.hostname);
+
+            if (options.workerUrl || options.workerHost) {
+                this.workerUrl = options.workerUrl || options.workerHost;
+            }
 
             if (!this.consent) {
                 console.log('[NCCS] Consent is false. Skipping sync.');
@@ -235,12 +247,23 @@
          * Internal: Resolve worker base URL based on script location
          */
         _getWorkerUrl: function (path) {
-            let base = window.location.origin;
-            if (document.currentScript && document.currentScript.src) {
-                try {
-                    const scriptUrl = new URL(document.currentScript.src);
-                    base = scriptUrl.origin;
-                } catch (e) {}
+            if (this.workerUrl) {
+                return new URL(path, this.workerUrl);
+            }
+            let base = initialWorkerUrl || window.location.origin;
+            
+            // Final fallback: if initialWorkerUrl is not captured, search DOM script tags
+            if (!initialWorkerUrl) {
+                const scripts = document.getElementsByTagName('script');
+                for (let i = 0; i < scripts.length; i++) {
+                    const src = scripts[i].src;
+                    if (src && (src.indexOf('/nccs.js') !== -1 || src.indexOf('/nccs.min.js') !== -1)) {
+                        try {
+                            base = new URL(src).origin;
+                            break;
+                        } catch (e) {}
+                    }
+                }
             }
             return new URL(path, base);
         },
