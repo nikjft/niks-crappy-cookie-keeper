@@ -215,6 +215,7 @@
             try {
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', workerUrl.toString(), true);
+                xhr.withCredentials = true;
                 xhr.setRequestHeader('Content-Type', 'application/json');
                 xhr.send(JSON.stringify({ cookie: cookieName || null }));
             } catch (e) {
@@ -330,6 +331,7 @@
                 try {
                     const xhr = new XMLHttpRequest();
                     xhr.open('POST', workerUrl.toString(), false);
+                    xhr.withCredentials = true;
                     xhr.setRequestHeader('Content-Type', 'application/json');
                     
                     try {
@@ -370,7 +372,8 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
-                signal: controller.signal
+                signal: controller.signal,
+                credentials: 'include'
             })
             .then(res => {
                 clearTimeout(timeoutId);

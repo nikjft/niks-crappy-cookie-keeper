@@ -1,11 +1,10 @@
 # NCCS (Nik's Crappy Cookie Keeper)
 
-> [!WARNING]
-> **Vibe-Coded Disclaimer:** This project is heavily vibe-coded and provided entirely **"as-is"**, without warranty of any kind, express or implied. If it breaks your tracking, deletes your user IDs, or summons browser errors, you are on your own. Use at your own risk!
-
 NCCS is a high-performance, mirrored server-side/client-side cookie synchronization setup designed to mitigate Intelligent Tracking Prevention (ITP) and browser-based cookie clearing behaviors. 
 
-By mirroring client-side JavaScript cookies (which Safari caps to 1–7 days) with HTTP-set `HttpOnly` server-side cookies (which are exempt from ITP caps) on a first-party subdomain, NCCS guarantees that analytics, segment, and marketing identifiers persist for up to 1 year.
+By mirroring client-side JavaScript cookies (which Safari caps to 1–7 days) with HTTP-set `HttpOnly` server-side cookies (which are exempt from ITP caps) on a first-party subdomain, NCCS guarantees that identifiers persist for up to 1 year.
+
+This should not be used to bypass user cookie consent. The system does permit easy management of consent state.
 
 ---
 
@@ -112,12 +111,13 @@ console.log(window._nccs['ga']);  // "GA1.2.1337..." (Convenient alias)
 To prevent Segment from generating a temporary capped anonymous ID before NCCS can restore the persistent server-side value, wrap the Segment initialization snippet in the `cookie_saver.ready()` callback:
 
 ```html
-<script src="https://nccs.yourdomain.com/nccs.js"></script>
+<script src="https://yourdomain.com/nccs/nccs.js"></script>
 <script>
   // 1. Initialize NCCS
   window.cookie_saver.init(
     '_ga',
-    { name: 'ajs_anonymous_id', generate: true } // Restore or generate anonymous ID
+    { name: 'ajs_anonymous_id', generate: true }, // Restore or generate anonymous ID
+    { workerUrl: 'https://yourdomain.com' } // Explicitly point to the root domain worker route
   );
 
   // 2. Wrap Segment Snippet in ready callback
@@ -128,6 +128,32 @@ To prevent Segment from generating a temporary capped anonymous ID before NCCS c
     analytics.page();
     }();
   });
+</script>
+```
+
+### Google Tag Manager / Consent Mode Integration
+If you are using Google Tag Manager (GTM) or a Consent Management Platform (CMP), you can simply fire NCCS based on the current consent state. For example, place this inside a Custom HTML tag that fires on a `consent_update` or `cookie_consent` trigger:
+
+```html
+<script src="https://yourdomain.com/nccs/nccs.js"></script>
+<script>
+  // 1. Read your current consent state
+  // Example: Checking Google Tag's internal consent state (1 = granted, 2 = denied)
+  var adConsentGranted = window.google_tag_data && 
+                         window.google_tag_data.ics && 
+                         window.google_tag_data.ics.getConsentState('ad_storage') === 1;
+                         
+  // (Alternatively, read directly from your CMP: e.g. var adConsentGranted = Cookiebot.consent.marketing;)
+  
+  // 2. Pass the consent status to NCCS
+  window.cookie_saver.setConsent(adConsentGranted);
+  
+  // 3. Sync or clear cookies accordingly
+  if (adConsentGranted) {
+    window.cookie_saver.init('_ga', '_fbp', { workerUrl: 'https://yourdomain.com' });
+  } else {
+    window.cookie_saver.reset(); 
+  }
 </script>
 ```
 
@@ -145,13 +171,14 @@ To prevent Segment from generating a temporary capped anonymous ID before NCCS c
    npm run deploy
    ```
 
-### 2. Configure 1st-Party CNAME Mapping (Essential)
-For cookie-writing to bypass ITP restrictions, your worker **must be served on a subdomain of your primary website**:
+### 2. Configure 1st-Party Route Mapping (Essential)
+To guarantee 100% immunity against Apple's ITP (Intelligent Tracking Prevention) and CNAME-cloaking detection, your worker **must be served on a path of your primary website** (not a subdomain).
 1. Log in to your **Cloudflare Dashboard**.
-2. Navigate to **Workers & Pages > niks-crappy-cookie-keeper**.
-3. Go to the **Settings** or **Triggers** tab.
-4. Under **Custom Domains**, click **Add Custom Domain**.
-5. Enter a subdomain on your site (e.g., `nccs.yourdomain.com`) and save.
+2. Navigate to your website's **Zone / Domain**.
+3. Go to **Workers Routes** on the sidebar.
+4. Click **Add route**.
+5. Enter a path on your site (e.g., `yourdomain.com/nccs/*`) and select the `niks-crappy-cookie-keeper` worker.
+6. When calling `cookie_saver.init()`, pass `{ workerUrl: 'https://yourdomain.com' }` in the options so the client SDK routes to the correct path.
 
 ---
 
@@ -168,3 +195,8 @@ NCCS includes an interactive dashboard and testing utilities for local developme
    👉 **`http://localhost:8787/`**
 
 *Note: Since browsers restrict cookies on `file://` protocols and block cross-origin cookies on mismatching ports, the worker automatically proxies the testing dashboard under its own same-origin port (`8787`) to ensure local cookie writing works perfectly.*
+
+
+# ⚠️ WARNING
+
+This project is heavily vibe-coded and provided entirely **"as-is"**, without warranty of any kind, express or implied. If it breaks your tracking, deletes your user IDs, or summons browser errors, you are on your own. Use at your own risk!
