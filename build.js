@@ -31,9 +31,24 @@ async function build() {
         const workerPath = path.join(__dirname, 'worker.js');
         let workerCode = fs.readFileSync(workerPath, 'utf8');
 
-        const regex = /(const CLIENT_JS_CODE = `)([\s\S]*?)(`;)/;
-        if (!regex.test(workerCode)) {
-            throw new Error('Could not find CLIENT_JS_CODE definition in worker.js');
+        // Locate boundary of CLIENT_JS_CODE by tracing backwards from the export default marker
+        const startMarker = 'const CLIENT_JS_CODE = `';
+        const exportMarker = 'export default {';
+        const closingMarker = '`;';
+
+        const startIndex = workerCode.indexOf(startMarker);
+        if (startIndex === -1) {
+            throw new Error('Could not find start of CLIENT_JS_CODE in worker.js');
+        }
+
+        const exportIndex = workerCode.indexOf(exportMarker);
+        if (exportIndex === -1) {
+            throw new Error('Could not find export default in worker.js');
+        }
+
+        const endIndex = workerCode.lastIndexOf(closingMarker, exportIndex);
+        if (endIndex === -1 || endIndex < startIndex + startMarker.length) {
+            throw new Error('Could not find closing `; of CLIENT_JS_CODE in worker.js');
         }
 
         // Escape backticks and template interpolation tokens to embed cleanly in worker.js
@@ -42,8 +57,13 @@ async function build() {
             .replace(/`/g, '\\`')
             .replace(/\${/g, '\\${');
 
-        workerCode = workerCode.replace(regex, `$1${escapedMinified}$3`);
-        fs.writeFileSync(workerPath, workerCode, 'utf8');
+        // Construct the new worker code
+        const updatedWorkerCode = 
+            workerCode.substring(0, startIndex + startMarker.length) +
+            escapedMinified +
+            workerCode.substring(endIndex);
+
+        fs.writeFileSync(workerPath, updatedWorkerCode, 'utf8');
         console.log('[Build] Successfully updated worker.js');
 
     } catch (error) {
