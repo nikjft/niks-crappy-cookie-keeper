@@ -32,7 +32,7 @@ export default {
 
         try {
             // Route 1: Serve client library script
-            if (url.pathname === '/nccs.js') {
+            if (url.pathname.endsWith('/nccs.js')) {
                 return new Response(CLIENT_JS_CODE, {
                     status: 200,
                     headers: {
@@ -44,7 +44,7 @@ export default {
             }
 
             // Route 2: Sync Endpoint
-            if (url.pathname === '/nccs/sync') {
+            if (url.pathname.endsWith('/nccs/sync')) {
                 if (method !== 'POST' && method !== 'GET') {
                     return new Response('Method Not Allowed', { status: 450, headers: corsHeaders });
                 }
@@ -145,7 +145,7 @@ export default {
             }
 
             // Route 3: Reset Endpoint
-            if (url.pathname === '/nccs/reset') {
+            if (url.pathname.endsWith('/nccs/reset')) {
                 let cookieToReset = null;
 
                 if (method === 'POST') {
