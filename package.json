@@ -10,6 +10,7 @@
     "deploy": "node build.js && wrangler deploy worker.js"
   },
   "devDependencies": {
+    "playwright": "^1.61.1",
     "terser": "^5.48.0",
     "wrangler": "^3.0.0"
   }

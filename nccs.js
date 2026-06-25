@@ -19,6 +19,7 @@
     }
 
     const SESSION_COOKIE_NAME = '_nccs_session';
+    const STATE_COOKIE_NAME = '_nccs_sync_state';
     const SESSION_EXPIRY_MS = 30 * 60 * 1000; // 30 minutes
     const DEFAULT_TIMEOUT_MS = 1000; // 1 second timeout for blocking sync
 
@@ -100,12 +101,38 @@
             const urlOverrides = this._getUrlOverrides(cookies);
             const hasOverrides = Object.keys(urlOverrides).length > 0;
 
-            // 2. Check session timestamp (Compute Limiting)
+            // 2. Read last-synced state
+            const stateCookie = getCookie(STATE_COOKIE_NAME);
+            let lastSyncState = {};
+            if (stateCookie) {
+                try {
+                    lastSyncState = JSON.parse(stateCookie);
+                } catch (e) {
+                    console.warn('[NCCS] Failed to parse sync state cookie:', e);
+                }
+            }
+
+            // 3. Check for any cookie value changes (new, changed, or deleted by ITP)
+            let hasChanges = false;
+            cookies.forEach(c => {
+                const currentVal = getCookie(c.name);
+                const stateVal = lastSyncState[c.name];
+                
+                const valA = currentVal === null ? undefined : currentVal;
+                const valB = stateVal === null ? undefined : stateVal;
+                
+                if (valA !== valB) {
+                    hasChanges = true;
+                    console.log(`[NCCS] Cookie [${c.name}] state changed: "${valB}" -> "${valA}"`);
+                }
+            });
+
+            // 4. Check session timestamp (Compute Limiting)
             const sessionCookie = getCookie(SESSION_COOKIE_NAME);
             const now = Date.now();
             let shouldSync = true;
 
-            if (sessionCookie && !hasOverrides && !options.force) {
+            if (sessionCookie && !hasOverrides && !hasChanges && !options.force) {
                 const lastSyncTime = parseInt(sessionCookie, 10);
                 if (!isNaN(lastSyncTime) && (now - lastSyncTime < SESSION_EXPIRY_MS)) {
                     shouldSync = false;
@@ -113,7 +140,7 @@
             }
 
             if (!shouldSync) {
-                console.log('[NCCS] Active session within 30 minutes. Skipping sync request.');
+                console.log('[NCCS] Active session within 30 minutes and no cookie changes detected. Skipping sync request.');
                 // Read existing local cookies and prime globals
                 cookies.forEach(c => {
                     const localVal = getCookie(c.name);
@@ -160,6 +187,17 @@
                 delete this.values[cookieName];
                 const stripped = cookieName.startsWith('_') ? cookieName.substring(1) : cookieName;
                 delete this.values[stripped];
+
+                // Remove specific key from client sync state
+                const stateCookie = getCookie(STATE_COOKIE_NAME);
+                if (stateCookie) {
+                    try {
+                        const state = JSON.parse(stateCookie);
+                        delete state[cookieName];
+                        setCookie(STATE_COOKIE_NAME, JSON.stringify(state), 365, domain);
+                    } catch (e) {}
+                }
+
                 workerUrl.searchParams.set('cookie', cookieName);
             } else {
                 // Read all keys from NCCS and clear them
@@ -170,6 +208,7 @@
                     }
                 });
                 this.values = {};
+                deleteCookie(STATE_COOKIE_NAME, domain);
             }
 
             // Make async call to reset server-side cookies
@@ -348,11 +387,14 @@
             .catch(err => {
                 console.error('[NCCS] Asynchronous sync failed:', err);
                 // Fallback: use existing client-side cookies
+                const newState = {};
                 payload.cookies.forEach(c => {
                     if (c.value) {
                         this.values[c.name] = c.value;
+                        newState[c.name] = c.value;
                     }
                 });
+                setCookie(STATE_COOKIE_NAME, JSON.stringify(newState), 365, options.domain);
                 this._exposeGlobals();
                 this._markReady();
             });
@@ -362,17 +404,22 @@
          * Internal: Process successful sync responses and write cookies/globals
          */
         _processSyncResponse: function (cookies, domain) {
+            const newState = {};
             Object.entries(cookies).forEach(([name, value]) => {
                 if (value) {
                     // Update client-side cookie with long lifetime
                     setCookie(name, value, 365, domain);
                     this.values[name] = value;
+                    newState[name] = value;
                 } else {
                     // Clear cookie if deleted on server
                     deleteCookie(name, domain);
                     delete this.values[name];
                 }
             });
+
+            // Save new sync state
+            setCookie(STATE_COOKIE_NAME, JSON.stringify(newState), 365, domain);
 
             this._updateSessionCookie(domain);
             this._exposeGlobals();
