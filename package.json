@@ -4,11 +4,13 @@
   "description": "Mirrored server-side/client-side cookie keeper",
   "main": "worker.js",
   "scripts": {
-    "dev": "wrangler dev worker.js --port 8787",
+    "build": "node build.js",
+    "dev": "node build.js && wrangler dev worker.js --port 8787",
     "serve": "npx http-server -p 3000 -c-1",
-    "deploy": "wrangler deploy worker.js"
+    "deploy": "node build.js && wrangler deploy worker.js"
   },
   "devDependencies": {
+    "terser": "^5.48.0",
     "wrangler": "^3.0.0"
   }
 }
