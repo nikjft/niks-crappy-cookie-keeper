@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="QA Testing Dashboard for NCCS - Nik's Crappy Cookie Keeper. Securely manage and test mirrored server-side/client-side persistent cookies.">
+    <title>NCCS - Cookie Keeper QA Dashboard</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-base: #0b0f19;
+            --bg-surface: rgba(17, 25, 40, 0.75);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --primary: #3b82f6;
+            --primary-glow: rgba(59, 130, 246, 0.15);
+            --success: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.15);
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --danger-glow: rgba(239, 68, 68, 0.15);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --radius: 12px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.08) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            min-height: 100vh;
+            line-height: 1.6;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header styling */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1.5rem;
+        }
+
+        .logo-section h1 {
+            font-size: 2.25rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            background: linear-gradient(135deg, #60a5fa 0%, #34d399 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.25rem;
+        }
+
+        .logo-section p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .status-badge {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 9999px;
+            padding: 0.5rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--success);
+            box-shadow: 0 0 12px var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; box-shadow: 0 0 16px var(--success); }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+
+        /* Dashboard Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        @media (min-width: 900px) {
+            .dashboard-grid {
+                grid-template-columns: 7fr 5fr;
+            }
+        }
+
+        /* Card (Glassmorphism design) */
+        .card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 1.75rem;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.4);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.75rem;
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background-color: rgba(255, 255, 255, 0.03);
+            font-weight: 600;
+            padding: 0.85rem 1rem;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .mono {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            background-color: rgba(255, 255, 255, 0.05);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            word-break: break-all;
+        }
+
+        /* Buttons & Forms */
+        .btn-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .btn {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem 1.25rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: var(--transition);
+        }
+
+        .btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background-color: #2563eb;
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        .btn-success {
+            background-color: var(--success);
+            color: white;
+            border: none;
+        }
+
+        .btn-success:hover {
+            background-color: #059669;
+            box-shadow: 0 0 15px var(--success-glow);
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+            border: none;
+        }
+
+        .btn-danger:hover {
+            background-color: #dc2626;
+            box-shadow: 0 0 15px var(--danger-glow);
+        }
+
+        .input-control {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        input[type="text"], select {
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            font-size: 0.9rem;
+            transition: var(--transition);
+        }
+
+        input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+
+        /* Badge tags */
+        .badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.15rem 0.5rem;
+            border-radius: 9999px;
+            text-transform: uppercase;
+        }
+
+        .badge-match {
+            background-color: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+        }
+
+        .badge-mismatch {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+        }
+
+        .badge-missing {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+        }
+
+        /* Logger Component */
+        .logger {
+            background-color: #05070c;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            height: 300px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .log-entry {
+            display: flex;
+            gap: 0.75rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+            padding-bottom: 0.25rem;
+        }
+
+        .log-time {
+            color: #6b7280;
+            flex-shrink: 0;
+        }
+
+        .log-type {
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .log-type.info { color: #60a5fa; }
+        .log-type.success { color: #34d399; }
+        .log-type.warn { color: #f59e0b; }
+        .log-type.error { color: #f87171; }
+
+        .log-text {
+            color: #d1d5db;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* URL builder form */
+        .url-builder {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .empty-state {
+            color: var(--text-muted);
+            font-style: italic;
+            text-align: center;
+            padding: 2rem 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="logo-section">
+            <h1>NCCS Cookie Keeper</h1>
+            <p>Persistent Server/Client Mirrored Cookie Synchronization Dashboard (QA Tool)</p>
+        </div>
+        <div class="status-badge">
+            <div class="status-dot" id="status-dot"></div>
+            <span id="status-text">Worker Offline</span>
+        </div>
+    </header>
+
+    <div class="dashboard-grid">
+        <!-- LEFT COLUMN: Cookie table & overrides -->
+        <div style="display: flex; flex-direction: column; gap: 2rem;">
+            <!-- Active Cookies Monitor -->
+            <div class="card">
+                <div class="card-title">
+                    <span>Live Cookie Monitor</span>
+                    <button class="btn" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;" onclick="refreshCookieTable()">
+                        🔄 Refresh View
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Cookie Target</th>
+                                <th>Client Value (`document.cookie`)</th>
+                                <th>Server Backup (`_nccs_[name]`)</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cookie-table-body">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Set/Edit Local Cookies Mock -->
+            <div class="card">
+                <div class="card-title">Write / Modify Local Cookie</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="input-control">
+                        <label for="new-cookie-name">Cookie Name</label>
+                        <select id="new-cookie-name">
+                            <option value="_ga">_ga (Google Analytics)</option>
+                            <option value="_fbp">_fbp (Meta Pixel)</option>
+                            <option value="ajs_anonymous_id">ajs_anonymous_id (Segment)</option>
+                            <option value="nccs_qa_custom">nccs_qa_custom (Custom Test)</option>
+                        </select>
+                    </div>
+                    <div class="input-control">
+                        <label for="new-cookie-value">Cookie Value</label>
+                        <input type="text" id="new-cookie-value" placeholder="e.g. GA1.1.13374829.1700000000">
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="writeLocalCookie()">Set Client Cookie</button>
+                    <button class="btn btn-danger" onclick="deleteLocalCookie()">Delete Client Cookie</button>
+                </div>
+            </div>
+
+            <!-- Hard URL Overrides Builder -->
+            <div class="card">
+                <div class="card-title">Simulate Hard URL Overrides</div>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: -0.75rem;">
+                    URL parameters of the format <code>?nccs_[cookie_name]=[value]</code> will bypass session checks and force-overwrite both server and client cookies.
+                </p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="input-control">
+                        <label for="override-cookie">Cookie Name</label>
+                        <select id="override-cookie">
+                            <option value="_ga">_ga (Google Analytics)</option>
+                            <option value="_fbp">_fbp (Meta Pixel)</option>
+                            <option value="ajs_anonymous_id">ajs_anonymous_id (Segment)</option>
+                        </select>
+                    </div>
+                    <div class="input-control">
+                        <label for="override-value">Override Value</label>
+                        <input type="text" id="override-value" placeholder="e.g. url_overridden_value_99">
+                    </div>
+                </div>
+                <button class="btn btn-success" onclick="applyUrlOverride()">Apply URL Parameter & Reload</button>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Operations Panel & Terminal Log -->
+        <div style="display: flex; flex-direction: column; gap: 2rem;">
+            <!-- Operations panel -->
+            <div class="card">
+                <div class="card-title">QA Test Actions</div>
+                <div class="btn-group" style="grid-template-columns: 1fr;">
+                    <button class="btn" onclick="triggerITPSimulation()">
+                        🛡️ Simulate ITP (Wipe Client Cookies)
+                    </button>
+                    <button class="btn" onclick="triggerManualSync()">
+                        🔄 Force Sync Now (`init()`)
+                    </button>
+                    <button class="btn" onclick="triggerGuidGeneration()">
+                        🔑 Generate Server GUID Cookie
+                    </button>
+                    <button class="btn" onclick="clearSessionCookie()">
+                        ⏳ Clear Session Lock (30m compute limit)
+                    </button>
+                    <button class="btn btn-danger" onclick="triggerReset()">
+                        ⚠️ Hard Reset (Clear All Everywhere)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Logger Terminal -->
+            <div class="card" style="flex-grow: 1;">
+                <div class="card-title">
+                    <span>NCCS Console & Event Logs</span>
+                    <button class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;" onclick="clearLogs()">
+                        Clear Logs
+                    </button>
+                </div>
+                <div class="logger" id="log-container">
+                    <!-- Logs inserted dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Logger and QA Scripts -->
+<script id="qa-scripts">
+    // --- QA SCRIPT UTILITIES ---
+
+    const monitoredCookies = ['_ga', '_fbp', 'ajs_anonymous_id', 'nccs_qa_custom'];
+    const logContainer = document.getElementById('log-container');
+
+    // Custom logger
+    function log(text, type = 'info') {
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'log-time';
+        const now = new Date();
+        timeSpan.textContent = now.toTimeString().split(' ')[0] + '.' + String(now.getMilliseconds()).padStart(3, '0');
+        
+        const typeSpan = document.createElement('span');
+        typeSpan.className = `log-type ${type}`;
+        typeSpan.textContent = `[${type.toUpperCase()}]`;
+        
+        const textSpan = document.createElement('span');
+        textSpan.className = 'log-text';
+        textSpan.textContent = text;
+        
+        entry.appendChild(timeSpan);
+        entry.appendChild(typeSpan);
+        entry.appendChild(textSpan);
+        
+        logContainer.appendChild(entry);
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    function clearLogs() {
+        logContainer.innerHTML = '';
+        log('Logs cleared.', 'info');
+    }
+
+    // Capture standard console.log
+    const originalConsoleLog = console.log;
+    const originalConsoleWarn = console.warn;
+    const originalConsoleError = console.error;
+
+    console.log = function(...args) {
+        originalConsoleLog.apply(console, args);
+        const msg = args.join(' ');
+        if (msg.includes('[NCCS]')) {
+            log(msg.replace('[NCCS] ', ''), msg.includes('complete') || msg.includes('updated') ? 'success' : 'info');
+        }
+    };
+    console.warn = function(...args) {
+        originalConsoleWarn.apply(console, args);
+        log(args.join(' '), 'warn');
+    };
+    console.error = function(...args) {
+        originalConsoleError.apply(console, args);
+        log(args.join(' '), 'error');
+    };
+
+    // Helper: read standard cookie
+    function getCookie(name) {
+        const value = "; " + document.cookie;
+        const parts = value.split("; " + name + "=");
+        if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
+        return null;
+    }
+
+    // Helper: set cookie
+    function setCookie(name, value, days) {
+        let expires = '';
+        if (days) {
+            const date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+            expires = "; expires=" + date.toUTCString();
+        }
+        const secureStr = window.location.protocol === 'https:' ? '; secure' : '';
+        document.cookie = `${name}=${encodeURIComponent(value)}${expires}; path=/; samesite=lax${secureStr}`;
+    }
+
+    // Helper: delete cookie
+    function deleteCookie(name) {
+        const secureStr = window.location.protocol === 'https:' ? '; secure' : '';
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; samesite=lax${secureStr}`;
+    }
+
+    // Live cookie monitoring table builder
+    function refreshCookieTable() {
+        const tbody = document.getElementById('cookie-table-body');
+        tbody.innerHTML = '';
+
+        monitoredCookies.forEach(name => {
+            const clientVal = getCookie(name);
+            const serverVal = getCookie(`_nccs_${name}`); // Read server cookie (if not HttpOnly, or get from window._nccs)
+            // Note: server cookies are HttpOnly on the server side, so they won't be in document.cookie!
+            // However, the worker sends back the synchronized values in the JSON, which NCCS stores in window._nccs.
+            // So we can read the server's version from window._nccs[name] to compare!
+            const serverSyncedVal = window._nccs ? window._nccs[name] : null;
+
+            let statusText = 'MATCH';
+            let statusClass = 'badge-match';
+
+            if (!clientVal && !serverSyncedVal) {
+                statusText = 'MISSING';
+                statusClass = 'badge-missing';
+            } else if (clientVal && !serverSyncedVal) {
+                statusText = 'NOT MIRRORED';
+                statusClass = 'badge-mismatch';
+            } else if (!clientVal && serverSyncedVal) {
+                statusText = 'RESTORE PENDING';
+                statusClass = 'badge-mismatch';
+            } else if (clientVal !== serverSyncedVal) {
+                statusText = 'MISMATCH';
+                statusClass = 'badge-mismatch';
+            }
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong class="mono" style="color: var(--primary);">${name}</strong></td>
+                <td><span class="mono">${clientVal ? escapeHtml(clientVal) : '<span style="color: var(--danger)">undefined</span>'}</span></td>
+                <td><span class="mono" style="color: var(--text-muted);">${serverSyncedVal ? escapeHtml(serverSyncedVal) : '<span style="color: var(--warning)">missing / httpOnly</span>'}</span></td>
+                <td><span class="badge ${statusClass}">${statusText}</span></td>
+                <td>
+                    <button class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="simulateITPFor('${name}')">Wipe</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // Add special session cookie visualization
+        const sessionVal = getCookie('_nccs_session');
+        const trSession = document.createElement('tr');
+        trSession.innerHTML = `
+            <td><strong class="mono" style="color: var(--warning);">_nccs_session</strong></td>
+            <td colspan="2"><span class="mono">${sessionVal ? new Date(parseInt(sessionVal)).toLocaleString() : '<span style="color: var(--danger)">undefined</span>'}</span></td>
+            <td><span class="badge ${sessionVal ? 'badge-match' : 'badge-missing'}">${sessionVal ? 'ACTIVE' : 'NO SESSION'}</span></td>
+            <td>
+                <button class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="clearSessionCookie()">Clear</button>
+            </td>
+        `;
+        tbody.appendChild(trSession);
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    // Check worker health
+    function checkWorkerHealth() {
+        const statusText = document.getElementById('status-text');
+        const statusDot = document.getElementById('status-dot');
+        const host = window.location.origin;
+
+        // Try to check worker at /nccs/sync
+        fetch('/nccs/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cookies: [] })
+        })
+        .then(res => {
+            if (res.ok) {
+                statusText.textContent = "Worker Active";
+                statusDot.style.backgroundColor = "var(--success)";
+                statusDot.style.boxShadow = "0 0 12px var(--success)";
+                log("Cloudflare Worker connectivity verified.", "success");
+            } else {
+                statusText.textContent = `Worker HTTP Error ${res.status}`;
+                statusDot.style.backgroundColor = "var(--warning)";
+                statusDot.style.boxShadow = "0 0 12px var(--warning)";
+            }
+        })
+        .catch(err => {
+            statusText.textContent = "Worker Not Connected (Run 'npm run dev' on :8787)";
+            statusDot.style.backgroundColor = "var(--danger)";
+            statusDot.style.boxShadow = "0 0 12px var(--danger)";
+            log("Cannot connect to local Worker on :8787. Ensure the wrangler dev server is running.", "error");
+        });
+    }
+
+    // --- FORM ACTIONS ---
+
+    function writeLocalCookie() {
+        const name = document.getElementById('new-cookie-name').value;
+        const val = document.getElementById('new-cookie-value').value || 'MOCK_VAL_' + Math.floor(Math.random() * 1000000);
+        setCookie(name, val, 1); // Save 1 day
+        log(`Wrote client cookie locally: ${name}=${val}`, 'success');
+        refreshCookieTable();
+    }
+
+    function deleteLocalCookie() {
+        const name = document.getElementById('new-cookie-name').value;
+        deleteCookie(name);
+        log(`Deleted client cookie locally: ${name}`, 'warn');
+        refreshCookieTable();
+    }
+
+    function simulateITPFor(name) {
+        deleteCookie(name);
+        log(`Simulated ITP deletion: Wiped client cookie ${name}`, 'warn');
+        refreshCookieTable();
+    }
+
+    function triggerITPSimulation() {
+        monitoredCookies.forEach(name => deleteCookie(name));
+        log("ITP Simulated! Wiped all client cookies from document.cookie. Ready to restore.", "warn");
+        refreshCookieTable();
+    }
+
+    function triggerManualSync() {
+        log("Triggering manual sync call to NCCS...", "info");
+        if (window.cookie_saver) {
+            window.cookie_saver.init(
+                '_ga', 
+                '_fbp', 
+                { name: 'ajs_anonymous_id', generate: false }, 
+                { name: 'nccs_qa_custom', generate: true },
+                { force: true } // Bypass the 30-minute lock for testing
+            );
+            setTimeout(() => {
+                refreshCookieTable();
+            }, 300);
+        } else {
+            log("NCCS script not loaded. Check connection to worker.", "error");
+        }
+    }
+
+    function triggerGuidGeneration() {
+        log("Triggering explicit GUID generation for: nccs_qa_custom", "info");
+        if (window.cookie_saver) {
+            window.cookie_saver.generate('nccs_qa_custom');
+            setTimeout(() => {
+                refreshCookieTable();
+            }, 300);
+        } else {
+            log("NCCS script not loaded.", "error");
+        }
+    }
+
+    function clearSessionCookie() {
+        deleteCookie('_nccs_session');
+        log("Cleared session lock cookie (_nccs_session). Next load/sync will hit the server.", "success");
+        refreshCookieTable();
+    }
+
+    function triggerReset() {
+        log("Triggering global reset...", "warn");
+        if (window.cookie_saver) {
+            window.cookie_saver.reset();
+            setTimeout(() => {
+                refreshCookieTable();
+            }, 300);
+        }
+    }
+
+    function applyUrlOverride() {
+        const name = document.getElementById('override-cookie').value;
+        const val = document.getElementById('override-value').value || 'override_' + Date.now();
+        const url = new URL(window.location.href);
+        url.searchParams.set(`nccs_${name}`, val);
+        log(`Redirecting to URL with parameter: nccs_${name}=${val}`, 'info');
+        window.location.href = url.toString();
+    }
+
+    // On Load
+    window.addEventListener('DOMContentLoaded', () => {
+        log("QA Dashboard loaded. Waiting for NCCS script...", "info");
+        
+        // Dynamically load the client script from the worker if served on port 8787,
+        // otherwise load directly from the local worker port (8787)
+        const nccsScript = document.createElement('script');
+        const isWorkerOrigin = window.location.port === '8787';
+        nccsScript.src = isWorkerOrigin ? '/nccs.js' : 'http://localhost:8787/nccs.js';
+        nccsScript.onerror = () => {
+            log("Could not load nccs.js from Cloudflare Worker, trying local fallback.", "warn");
+            const fallback = document.createElement('script');
+            fallback.src = 'nccs.js';
+            fallback.onload = initNccs;
+            document.body.appendChild(fallback);
+        };
+        nccsScript.onload = initNccs;
+        document.body.appendChild(nccsScript);
+
+        setTimeout(checkWorkerHealth, 1000);
+    });
+
+    function initNccs() {
+        log("NCCS script loaded. Initializing NCCS...", "info");
+        if (window.cookie_saver) {
+            // Configure NCCS
+            window.cookie_saver.ready(() => {
+                log("NCCS Ready Callback Fired!", "success");
+                refreshCookieTable();
+            });
+
+            // Initialize with monitored list
+            window.cookie_saver.init(
+                '_ga',
+                '_fbp',
+                { name: 'ajs_anonymous_id', generate: false },
+                { name: 'nccs_qa_custom', generate: true } // Generate if missing
+            );
+        }
+    }
+</script>
+</body>
+</html>

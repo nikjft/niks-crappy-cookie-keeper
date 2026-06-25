@@ -1,0 +1,14 @@
+{
+  "name": "niks-crappy-cookie-keeper",
+  "version": "1.0.0",
+  "description": "Mirrored server-side/client-side cookie keeper",
+  "main": "worker.js",
+  "scripts": {
+    "dev": "wrangler dev worker.js --port 8787",
+    "serve": "npx http-server -p 3000 -c-1",
+    "deploy": "wrangler deploy worker.js"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}
